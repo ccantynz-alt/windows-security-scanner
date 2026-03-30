@@ -51,11 +51,15 @@ Go to the [Releases](https://github.com/ccantynz-alt/windows-security-scanner/re
 
 Requires [Rust](https://rustup.rs/) and [Node.js](https://nodejs.org/).
 
+### Linux / macOS (bash)
 ```bash
-# Build the frontend
 cd ui && npm install && npm run build && cd ..
+cargo build --release
+```
 
-# Build the app
+### Windows (PowerShell)
+```powershell
+cd ui; npm install; npm run build; cd ..
 cargo build --release
 ```
 
