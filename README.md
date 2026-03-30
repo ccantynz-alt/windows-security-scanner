@@ -25,6 +25,28 @@ A complete Windows security scanner with a GUI dashboard and Claude AI threat an
 - **Quarantine** — Safely isolate threats with restore capability for false positives
 - **Signature Updates** — Download latest threat databases
 
+## Download
+
+Go to the [Releases](https://github.com/ccantynz-alt/windows-security-scanner/releases) page and download one of the following:
+
+| File | Description |
+|------|-------------|
+| **`down.exe`** | Portable executable — just download and run, no installation needed |
+| **`DOWN-Security-Scanner-v0.3.0-windows.zip`** | Installer package — extract, right-click `install.bat` → **Run as administrator**. Creates a desktop shortcut and adds `down` to your PATH |
+
+### Quick start (portable)
+
+1. Download `down.exe` from the [latest release](https://github.com/ccantynz-alt/windows-security-scanner/releases/latest)
+2. Double-click to run — the dashboard window opens
+3. Windows may show a SmartScreen warning since the app isn't code-signed — click **More info → Run anyway**
+
+### Installer
+
+1. Download `DOWN-Security-Scanner-v0.3.0-windows.zip` from the [latest release](https://github.com/ccantynz-alt/windows-security-scanner/releases/latest)
+2. Extract the zip
+3. Right-click `install.bat` → **Run as administrator**
+4. A desktop shortcut is created and you can run `down` from any terminal
+
 ## Build From Source
 
 Requires [Rust](https://rustup.rs/) and [Node.js](https://nodejs.org/).
