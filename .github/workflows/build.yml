@@ -1,0 +1,166 @@
+name: Build Windows Installer
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: windows-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: windows-cargo-
+
+      - name: Install frontend dependencies
+        working-directory: ui
+        run: npm install
+
+      - name: Build frontend
+        working-directory: ui
+        run: npm run build
+
+      - name: Build Tauri app (installer)
+        working-directory: src-tauri
+        run: cargo build --release
+
+      - name: Create NSIS installer
+        shell: pwsh
+        run: |
+          # Create a simple installer using PowerShell
+          $releaseDir = "src-tauri/target/release"
+          $installerDir = "installer"
+          New-Item -ItemType Directory -Force -Path $installerDir
+
+          # Copy the binary
+          Copy-Item "$releaseDir/down.exe" "$installerDir/down.exe"
+
+          # Create a setup script that copies to Program Files and adds to PATH
+          @"
+          @echo off
+          echo ============================================
+          echo   DOWN Security Scanner - Installer v0.3.0
+          echo ============================================
+          echo.
+
+          :: Check for admin
+          net session >nul 2>&1
+          if %errorLevel% neq 0 (
+              echo ERROR: Please run this installer as Administrator.
+              echo Right-click and select "Run as administrator"
+              pause
+              exit /b 1
+          )
+
+          :: Create install directory
+          set INSTALL_DIR=%ProgramFiles%\DOWN Security Scanner
+          echo Installing to: %INSTALL_DIR%
+          mkdir "%INSTALL_DIR%" 2>nul
+
+          :: Copy files
+          copy /Y "%~dp0down.exe" "%INSTALL_DIR%\down.exe"
+
+          :: Add to PATH
+          setx /M PATH "%PATH%;%INSTALL_DIR%"
+
+          :: Create desktop shortcut
+          powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\DOWN Security Scanner.lnk'); $sc.TargetPath = '%INSTALL_DIR%\down.exe'; $sc.WorkingDirectory = '%INSTALL_DIR%'; $sc.Description = 'DOWN - AI Security Scanner'; $sc.Save()"
+
+          :: Create Start Menu shortcut
+          set START_DIR=%ProgramData%\Microsoft\Windows\Start Menu\Programs
+          powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%START_DIR%\DOWN Security Scanner.lnk'); $sc.TargetPath = '%INSTALL_DIR%\down.exe'; $sc.WorkingDirectory = '%INSTALL_DIR%'; $sc.Description = 'DOWN - AI Security Scanner'; $sc.Save()"
+
+          echo.
+          echo ============================================
+          echo   Installation complete!
+          echo   Desktop shortcut created.
+          echo   You can also run "down" from any terminal.
+          echo ============================================
+          pause
+          "@ | Out-File -FilePath "$installerDir/install.bat" -Encoding ascii
+
+          # Create uninstaller
+          @"
+          @echo off
+          echo Uninstalling DOWN Security Scanner...
+          net session >nul 2>&1
+          if %errorLevel% neq 0 (
+              echo ERROR: Please run as Administrator.
+              pause
+              exit /b 1
+          )
+          rmdir /S /Q "%ProgramFiles%\DOWN Security Scanner"
+          del "%USERPROFILE%\Desktop\DOWN Security Scanner.lnk" 2>nul
+          del "%ProgramData%\Microsoft\Windows\Start Menu\Programs\DOWN Security Scanner.lnk" 2>nul
+          echo Uninstalled successfully.
+          pause
+          "@ | Out-File -FilePath "$installerDir/uninstall.bat" -Encoding ascii
+
+          # Create zip package
+          Compress-Archive -Path "$installerDir/*" -DestinationPath "DOWN-Security-Scanner-v0.3.0-windows.zip"
+          echo "Installer package created: DOWN-Security-Scanner-v0.3.0-windows.zip"
+
+      - name: Upload standalone exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: down-windows-exe
+          path: src-tauri/target/release/down.exe
+
+      - name: Upload installer package
+        uses: actions/upload-artifact@v4
+        with:
+          name: DOWN-Security-Scanner-installer
+          path: DOWN-Security-Scanner-v0.3.0-windows.zip
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            DOWN-Security-Scanner-v0.3.0-windows.zip
+            src-tauri/target/release/down.exe
+          body: |
+            ## DOWN Security Scanner v0.3.0
+
+            AI-powered Windows security scanner with Claude cockpit.
+
+            ### Quick Install
+            1. Download `DOWN-Security-Scanner-v0.3.0-windows.zip`
+            2. Extract it
+            3. Right-click `install.bat` → **Run as administrator**
+            4. Done! Double-click the desktop shortcut or run `down` from any terminal.
+
+            ### Portable (no install)
+            Just download `down.exe` and run it directly. No installation needed.
+
+            ### What's included
+            - 6 scan modules (processes, startup, files, browser extensions, network, scareware)
+            - NUKE mode: aggressively removes all threats
+            - Browser fix: resets hijacked homepage/search engine
+            - Windows Defender tampering detection
+            - Claude AI analysis cockpit
+            - Quarantine with restore capability
+          draft: false
+          prerelease: false
