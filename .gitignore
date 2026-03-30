@@ -1,3 +1,5 @@
-/target
-Cargo.lock
+node_modules/
+target/
+ui/dist/
 *.pdb
+Cargo.lock
