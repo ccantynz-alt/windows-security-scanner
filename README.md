@@ -25,6 +25,14 @@ A complete Windows security scanner with a GUI dashboard and Claude AI threat an
 - **Quarantine** — Safely isolate threats with restore capability for false positives
 - **Signature Updates** — Download latest threat databases
 
+## Download
+
+### Pre-built Windows executable
+
+Check the [Releases](https://github.com/ccantynz-alt/windows-security-scanner/releases) page for the latest pre-built `down.exe`. Download the `.exe` file from the most recent release and run it — no installation required.
+
+> If no release is available yet, you'll need to build from source (see below).
+
 ## Build From Source
 
 Requires [Rust](https://rustup.rs/) and [Node.js](https://nodejs.org/).
